@@ -143,3 +143,15 @@ vite.config.ts.timestamp-*
 
 # System specific files
 .DS_Store
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Python virtual environment
+.venv/
+
+# Python tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

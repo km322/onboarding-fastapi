@@ -1,0 +1,63 @@
+[project]
+name = "backend"
+version = "1.0.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.165.0",
+    "fastapi-cli>=0.0.34",
+    "pydantic-settings>=2.16.3",
+    "pymongo>=4.20.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.2",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "A",
+    "C4",
+    "DTZ",
+    "FAST",
+    "PIE",
+    "PT",
+    "RET",
+    "SIM",
+    "PLE",
+    "PLW",
+    "RUF",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Schema fields are camelCase to match the JSON that the frontend sends and receives.
+"src/*/schemas.py" = ["N815"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,6 +1,6 @@
 # Onboarding to Triton Software Engineering
 
-Welcome to the Triton Software Engineering onboarding repository! This repository contains a guide for new developers to learn about our software development process and general software engineering concepts. By following along, you'll create a todo list application using the MERN stack and prepare yourself to contribute to TSE.
+Welcome to the Triton Software Engineering onboarding repository! This repository contains a guide for new developers to learn about our software development process and general software engineering concepts. By following along, you'll create a todo list application with a React frontend, a FastAPI (Python) backend, and a MongoDB database, and prepare yourself to contribute to TSE.
 
 Completion of all parts of this guide **before the start of winter quarter** is required for every newly recruited TSE developer. You can work through them at your own pace, and if you have any questions, feel free to ask in the **#onboarding** channel on Slack. We want to help!
 

@@ -83,7 +83,7 @@ Finally, we'll add the ability to assign users to tasks and see who is the assig
 2. Add another state variable `isEditing` which will store a boolean indicating whether the `TaskForm` is open.
 3. Set `isEditing` to true when the "Edit task" button is clicked.
 4. When `isEditing` is true, display a `TaskForm` in edit mode prefilled with this task's data; otherwise, display the task information as we just implemented. Upon submission of the `TaskForm`, change `isEditing` back to false and set the `task` state variable to the updated task in the callback.
-5. Test your changes by opening the `TaskDetail` page, clicking "Edit task," changing the values, and clicking Save. You can copy and paste user IDs from mongosh. Try this for multiple different tasks and try some special cases: empty form fields, a task ID instead of a user ID, a nonexistent ID, no change in the form, etc.
+5. Test your changes by opening the `TaskDetail` page, clicking "Edit task," changing the values, and clicking Save. You can copy and paste user IDs from mongosh. Try this for multiple different tasks and try some special cases: empty form fields, a task ID instead of a user ID, a nonexistent ID, no change in the form, etc. A task ID or a nonexistent ID should show "Not assigned", since the backend can't find a User with that ID. Something that isn't an ID at all (like `abc`) should show the error dialog with a 422 error.
    <details>
    <summary><strong>🤔 For new developers: Thinking about the user experience</strong></summary>
 

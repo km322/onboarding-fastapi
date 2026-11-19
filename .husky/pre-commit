@@ -92,14 +92,39 @@ explain_no_verify() {
 }
 
 dir_check() {
-	for dir in $node_dirs; do
+	for dir in $node_dirs $python_dirs; do
 		if ! [ -d "${dir}" ]; then
 			error "Directory '${dir}' does not exist. Please"
-			error " edit the 'node_dirs' variable in the config:"
+			error " edit the 'node_dirs' or 'python_dirs' variable in the config:"
 			error "    ${config_file}"
 			exit 1
 		fi
 	done
+}
+
+is_python_dir() {
+	for python_dir in $python_dirs; do
+		if [ "${1}" = "${python_dir}" ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+check_command_for() {
+	if is_python_dir "${1}"; then
+		echo "${python_check_command}"
+	else
+		echo "${check_command}"
+	fi
+}
+
+fix_command_for() {
+	if is_python_dir "${1}"; then
+		echo "${python_fix_command}"
+	else
+		echo "${fix_command}"
+	fi
 }
 
 autocrlf_check() {
@@ -129,9 +154,10 @@ unstaged_changes_check() {
 
 lint_check() {
 	failed_dirs=''
-	for dir in $node_dirs; do
+	for dir in $node_dirs $python_dirs; do
+		dir_check_command="$(check_command_for "${dir}")"
 		log "Running lint check in '${dir}'..."
-		if ! (cd "${dir}" && $check_command); then
+		if ! (cd "${dir}" && $dir_check_command); then
 			failed_dirs="${failed_dirs} ${dir}"
 		fi
 	done
@@ -150,12 +176,15 @@ lint_check() {
 		return 0
 	fi
 
-	log "The lint autofix command is:"
-	log "    ${fix_command}"
-	if ask_yes_no "Run this command in each failed directory?" "no"; then
+	log "The lint autofix commands are:"
+	for dir in $failed_dirs; do
+		log "    ${dir}: $(fix_command_for "${dir}")"
+	done
+	if ask_yes_no "Run these commands in each failed directory?" "no"; then
 		for dir in $failed_dirs; do
+			dir_fix_command="$(fix_command_for "${dir}")"
 			log "Running autofix command in '${dir}'..."
-			(cd "${dir}" && $fix_command)
+			(cd "${dir}" && $dir_fix_command)
 		done
 
 		log "Please manually fix any remaining lint errors,"

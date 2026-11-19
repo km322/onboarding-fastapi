@@ -33,7 +33,7 @@ Next, we'll add a new frontend page that displays information about a particular
    _We recommend using the JavaScript built-in class [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat) to format dates and times consistently. In this case, for the task creation date, you can use the `"en-US"` locale, `"full"` date style, and `"short"` time style._
    </details>
 
-8. Verify that different tasks from your local database are displayed correctly on the page. Make sure to check special cases like overflowing text, empty description, and nonexistent ID.
+8. Verify that different tasks from your local database are displayed correctly on the page. Make sure to check special cases like overflowing text, empty description, and nonexistent ID. (An empty description can come from the backend as either `null` or `""`, so check whether the description is truthy rather than comparing it to `undefined`.)
 
 ## Update to component: `TaskItem`
 

@@ -33,5 +33,13 @@
     "scss",
     "pcss",
     "postcss"
-  ]
+  ],
+
+  // Use Ruff to format and auto fix Python files in the backend
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit"
+    }
+  }
 }

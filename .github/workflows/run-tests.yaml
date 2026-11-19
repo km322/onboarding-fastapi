@@ -9,10 +9,23 @@ jobs:
     name: Frontend tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
       - name: Run tests
         working-directory: frontend
         run: |
           npm ci
           npm run test -- run
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          working-directory: backend
+      - name: Run tests
+        working-directory: backend
+        run: |
+          uv sync --locked
+          make test

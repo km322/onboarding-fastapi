@@ -20,20 +20,18 @@ Retrieves an array of all Tasks in the database, sorted by creation date in reve
 {
   "tasks": [
     {
-      "_id": "64ebc7a5fa1e11e2d987a8eb",
       "title": "Task 2",
       "description": "This is another task",
       "isChecked": false,
-      "dateCreated": "2023-08-27T22:01:09.704Z",
-      "__v": 0
+      "_id": "64ebc7a5fa1e11e2d987a8eb",
+      "dateCreated": "2023-08-27T22:01:09.704000Z"
     },
     {
-      "_id": "64f294ac0e688c8cf9dd199d",
       "title": "Task 1",
       "description": "This is a task",
       "isChecked": true,
-      "dateCreated": "2023-08-27T22:00:06.488Z",
-      "__v": 0
+      "_id": "64f294ac0e688c8cf9dd199d",
+      "dateCreated": "2023-08-27T22:00:06.488000Z"
     }
   ]
 }
@@ -50,63 +48,92 @@ _In a real project, we could use a route like this to search and sort/filter Tas
 
 ![](../images/get_tasks_backend_flow.png)
 
+In our backend, `src/main.py` passes the request to the task router, the route function for `GET /api/tasks` in `src/task/router.py` handles it, and that route function calls `get_all` in `src/task/service.py` to query the database.
+
 ### Walkthrough
 
-1. In `backend/src/controllers`, create a new file `tasks.ts`.
-2. Copy the skeleton code below into tasks.ts.
+1. Open `backend/src/task/service.py`, which contains all of the MongoDB queries for Tasks. Copy the skeleton code below into the file, between the `create` and `get_by_id` functions.
 
-   ```typescript
-   import { RequestHandler } from "express";
-   import TaskModel from "src/models/task";
-
-   export const getAllTasks: RequestHandler = async (req, res, next) => {
-     try {
-       // your code here
-     } catch (error) {
-       next(error);
-     }
-   };
+   ```python
+   async def get_all(database: AsyncDatabase[dict[str, Any]]) -> list[TaskResponse]:
+       """Return every task, newest first."""
+       # your code here
    ```
 
-3. Use the [`Model.find()`](<https://mongoosejs.com/docs/api/model.html#Model.find()>) and [`Query.prototype.sort()`](<https://mongoosejs.com/docs/api/query.html#Query.prototype.sort()>) Mongoose functions to retrieve a sorted list of Tasks.
-   1. `Model.find()` is a static function on the `Model` class, which our `TaskModel` extends. It returns a `Query` object. Refer to `getTask` in `controllers/task.ts` for an example of how to use the similar `findById()` function.
-   2. `Query.prototype.sort()` is an instance function on the `Query` class (for JavaScript, when you see "prototype," that means it's an instance member). It returns the new `Query`. We want to sort by the `dateCreated` field in descending order, so that determines what we should pass in to `sort()`.
-   3. Remember to `await` the `Query`.
-4. Return a response with status code 200 and JSON body matching the format of the example above. Refer to `getTask` in `controllers/task.ts` for an example of how to return a response with Express.
-5. In `backend/src/routes`, create a new file `tasks.ts` with the following contents:
+   The return type, `list[TaskResponse]`, means that this function returns a list of Tasks in the same format that the other functions in this file use for a single Task.
 
-   ```typescript
-   import express from "express";
-   import * as TasksController from "src/controllers/tasks";
+2. Use the [`AsyncCollection.find()`](https://pymongo.readthedocs.io/en/stable/api/pymongo/asynchronous/collection.html#pymongo.asynchronous.collection.AsyncCollection.find) and [`AsyncCursor.sort()`](https://pymongo.readthedocs.io/en/stable/api/pymongo/asynchronous/cursor.html#pymongo.asynchronous.cursor.AsyncCursor.sort) PyMongo methods to retrieve a sorted list of Tasks.
+   1. `find()` is a method on the `AsyncCollection` class, and `_collection(database)` gives us the collection that stores our Tasks. When you call `find()` with no arguments, it matches every document in the collection. Refer to `get_by_id` in the same file for an example of how to use the similar `find_one()` method.
+   2. Unlike `find_one()`, `find()` should not be `await`ed. It returns an [`AsyncCursor`](https://pymongo.readthedocs.io/en/stable/api/pymongo/asynchronous/cursor.html#pymongo.asynchronous.cursor.AsyncCursor) object, which only fetches the documents from the database when you loop over it.
+   3. `sort()` is a method on the `AsyncCursor` class. It returns the same cursor, so you can call it right after `find()`. We want to sort by the `dateCreated` field in descending order, so that determines what we should pass in to `sort()`: the field name and the [`pymongo.DESCENDING`](https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.DESCENDING) direction. Remember to import it at the top of the file with `from pymongo import DESCENDING`.
+   4. Loop over the cursor with `async for` (instead of `await`) and convert each document into a `TaskResponse` with the existing `_to_response` function, like `get_by_id` does. The shortest way to do this is an [asynchronous list comprehension](https://docs.python.org/3/reference/expressions.html#asynchronous-comprehensions): `[... async for document in cursor]`.
 
-   const router = express.Router();
+   <details>
+   <summary><strong>🤔 For new developers: List comprehensions</strong></summary>
 
-   router.get("/", TasksController.getAllTasks);
+   _A [list comprehension](https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions) is a short way to build a list by looping over something. For example, `[n * 2 for n in numbers]` creates a new list with every element of `numbers` doubled, similar to `numbers.map((n) => n * 2)` in JavaScript. Writing `async for` instead of `for` lets us loop over an `AsyncCursor`, which has to wait for the database while it fetches each batch of documents._
 
-   export default router;
+   </details>
+
+3. Next, we'll describe the shape of the response body. In `backend/src/task/schemas.py`, add the following class to the bottom of the file:
+
+   ```python
+   class TaskListResponse(BaseModel):
+       """Body of the response to GET /api/tasks."""
+
+       tasks: list[TaskResponse]
    ```
 
-   Similar to `routes/task.ts`, this creates a router which calls the function we just wrote.
+   Just like `TaskResponse` describes a single Task, `TaskListResponse` describes an object with one field, `tasks`, which holds a list of Tasks. This matches the example response above. FastAPI uses the return type of a route function to decide which fields to send and to convert them to JSON (see [Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/) in the FastAPI tutorial).
 
-6. In `src/app.ts`, add the following code:
+4. In `backend/src/task/router.py`, add `TaskListResponse` to the import from `src.task.schemas`:
 
-   ```typescript
-   import taskRoutes from "src/routes/task";
-   import tasksRoutes from "src/routes/tasks"; // add this line
-
-   // ...
-
-   app.use("/api/task", taskRoutes);
-   app.use("/api/tasks", tasksRoutes); // add this line
+   ```python
+   from src.task.schemas import TaskCreate, TaskListResponse, TaskResponse
    ```
 
-   Be careful to write "tasks" plural instead of singular. This tells Express to use the router we just created for any request that starts with `/api/tasks`.
+   Then copy the following skeleton code above the `get_task` function:
 
-7. Test your implementation. Make sure your backend is running locally and you've created at least three different Tasks, then call the new route through Postman or run the following command:
+   ```python
+   @router.get("/tasks")
+   async def get_all_tasks(database: Database) -> TaskListResponse:
+       """Return every task, newest first."""
+       # your code here
+   ```
+
+   In FastAPI, a route function is both the route definition and the request handler (if you've used Express, these would normally be two separate pieces of code). The `@router.get("/tasks")` decorator tells FastAPI to call this function for every `GET` request to that path, and the function body handles the request. FastAPI fills in the `database` parameter for us, just like in `get_task`.
+
+   Be careful to write "tasks" plural instead of singular, and don't add `/api` to the path. The router at the top of the file was created with `APIRouter(prefix="/api", ...)`, so FastAPI adds `/api` to the start of every path in this file, which makes the full path `/api/tasks`. See [Bigger Applications - Multiple Files](https://fastapi.tiangolo.com/tutorial/bigger-applications/#apirouter) in the FastAPI tutorial for more info about `APIRouter`.
+
+5. Fill in the body of `get_all_tasks`. Call the `get_all` function you just wrote (remember to `await` it) and return a `TaskListResponse` whose `tasks` field is the list of Tasks. Refer to `get_task` for an example of how a route function calls the service and returns a result. FastAPI sends the response with status code 200 by default, so you don't need to set it.
+
+   Make sure you return a `TaskListResponse` instead of the list by itself. The frontend expects an object with a `tasks` field, like the example response above.
+
+6. We don't need to change `src/main.py`, because the task router is already included at the bottom of that file:
+
+   ```python
+   app.include_router(task_router)
+   ```
+
+   This makes every route function in `src/task/router.py` available, including the one we just added. (If you've used Express, `app.include_router()` is similar to `app.use()`.) We'll only need to edit `src/main.py` when we create a new router in [Part 2](../part-2/).
+
+7. Test your implementation. Make sure your backend is running locally (`make start` in the `backend` folder; it automatically reloads when you save a file) and you've created at least three different Tasks, then call the new route through Postman or run the following command:
+
    ```shell
    curl http://127.0.0.1:3001/api/tasks
    ```
+
    You should see a list of your Task objects in order from latest to earliest creation date.
+
+   You can also test the route with FastAPI's [interactive API docs](https://fastapi.tiangolo.com/tutorial/first-steps/#interactive-api-docs), which are a great alternative to Postman. Open http://localhost:3001/docs in your browser, click on `GET /api/tasks`, click "Try it out," and then click "Execute." The response body appears below the button.
+
+   <details>
+   <summary><strong>❓ Hint: Debugging the new route</strong></summary>
+
+   _If the newest Task appears at the bottom of the list instead of the top, check that you called `sort()` with `DESCENDING`. If you get a 404 error with `{"detail": "Not Found"}`, check the path in `@router.get(...)`: it should be `"/tasks"`, not `"/api/tasks"` or `"/task"`. If you get a 500 error with `{"detail": "Internal Server Error"}`, look at the terminal where the backend is running. It prints the full error, including the line of your code that caused it. A common cause is a missing `await`._
+
+   </details>
+
 8. In `frontend/src/api/tasks.ts`, copy the skeleton code below to the bottom of the file:
    ```typescript
    export async function getAllTasks(): Promise<APIResult<Task[]>> {
@@ -307,7 +334,6 @@ There are many valid approaches to writing CSS—we'll use flexbox layout, which
    ```
 
    Note the following points about this code:
-
    1. We have a state variable called `tasks` whose type is `Task[]` (an array of `Task` objects). The initial value is an empty array.
    2. We have a `useEffect` hook which we'll fill out to fetch the list of `Tasks` from our backend and store it in the state.
    3. In the returned JSX, we use [conditional rendering with the ternary operator](https://react.dev/learn/conditional-rendering#conditional-ternary-operator--) to show something (message) if `tasks.length` is 0, and something else (the list of tasks) if not.
@@ -370,7 +396,7 @@ Once you have all of the above working correctly, follow the steps below to save
 2. Run `git status` and check the output to make sure you're on your Part 1 branch. If not, run `git checkout part-1`. The output should also list all the files you've changed so far under "Changes not staged for commit."
 3. Run `git add .` to "stage" all of the changes. (The `.` denotes everything in the current folder; you can also specify particular folders or files.) If you run `git status` again, you should see that your changes have become "Changes to be committed."
 4. Run `git commit -m 'Implement part 1.1'` to commit your changes to the `part-1` branch locally. You can write your own commit message in between the quotes.
-5. Wait for the pre-commit hook to finish. This uses a custom TSE script to check that all files are correctly formatted and that there are no linter errors. It also checks that no secret credentials are being exposed in the commit. If the pre-commit hook fails, read through the output and fix the problems, then run the `git commit` command again.
+5. Wait for the pre-commit hook to finish. This uses a custom TSE script to check that all files are correctly formatted and that there are no linter errors. In `backend`, it runs `make lint-check`, which checks your Python code with Ruff and mypy. It also checks that no secret credentials are being exposed in the commit. If the pre-commit hook fails, read through the output and fix the problems, then run the `git commit` command again. Running `make lint-fix` in `backend` (or `npm run lint-fix` in `frontend`) automatically fixes most formatting and lint problems, but remember to `git add` the fixed files before committing again.
 6. Run `git push` to push the current state of your branch to your remote fork. Since this is the first time you're pushing this branch, it will fail and give you another command to run instead. Paste that command and run it. In the future, on this branch, you can just run `git push`.
 7. Open your fork in GitHub and click on the branch dropdown on the left. You should see a new branch called `part-1`. You'll probably also see a banner at the top of the page telling you that you have a new branch.
 

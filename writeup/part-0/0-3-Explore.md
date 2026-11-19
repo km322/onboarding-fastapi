@@ -29,47 +29,85 @@ Before we look more closely at the code, let's check out the Figma designs for t
 
 ## Explore the repository contents
 
-Finally, let's examine the structure of the project and some important files. Here we stay specific to MERN, but you'll see similar patterns across projects inside and outside of TSE, even those that use other tech stacks. Most of the files also have comments explaining what each part of the code does in greater detail—we encourage you to read through those as well.
+Finally, let's examine the structure of the project and some important files. Here we stay specific to our stack (MongoDB, FastAPI, React, and Node for the frontend tooling), but you'll see similar patterns across projects inside and outside of TSE, even those that use other tech stacks. Most of the files also have comments explaining what each part of the code does in greater detail, and we encourage you to read through those as well.
 
 As we've seen, the repo has two main folders: `backend` and `frontend`. Note that this is just one way to organize a full-stack project. Some projects place the frontend code inside the backend directory, structure the backend route handlers differently, place frontend style and test files in their own folders, etc. It doesn't really matter what convention you follow, as long as you stay consistent within each project.
 
-In a deployed project, the frontend and backend are often hosted on their own servers with their own Node environments. During development, we simulate this by placing them in separate directories and running each Node environment on different ports.
+In a deployed project, the frontend and backend are often hosted on their own servers. Ours are even written in different languages: the backend runs in a Python environment, and the frontend runs in a Node environment. During development, we simulate this by placing them in separate directories and running each one on a different port (3001 for the backend and 5173 for the frontend).
 
 ### Backend files
 
-- [`package.json`](/backend/package.json) **marks this folder as a Node package** and provides information so Node knows how to run the code. As a JSON file, it's formatted as a set of `"key": <value>` pairs. Most of the keys would only be relevant if we were publishing this as a library on NPM, so we'll just cover the ones that are important for us as developers. ([`package.json` documentation](https://docs.npmjs.com/cli/v10/configuring-npm/package-json))
+- [`pyproject.toml`](/backend/pyproject.toml) **marks this folder as a Python project** and provides information so [uv](https://docs.astral.sh/uv/), our Python package manager, knows which Python version and packages the code needs. It's written in [TOML](https://toml.io/en/), a config format made of `key = value` pairs grouped under `[section]` headers. Some of the keys would only be relevant if we were publishing this as a library, so we'll just cover the ones that are important for us as developers. ([`pyproject.toml` guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/))
   <details>
-  <summary><strong>Contents of package.json</strong></summary>
+  <summary><strong>Contents of pyproject.toml</strong></summary>
 
-  - `dependencies`: Set of **packages that we use** in our own code and the allowed version numbers. NPM refers to this when it installs dependencies (`npm install`), and it automatically updates it when we add another package (`npm install <package>`). See the [`package.json dependencies` docs](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#dependencies) for more info about the syntax.
-  - `devDependencies`: Set of **packages that we use only during development** (such as testing frameworks and documentation generators) and the allowed version numbers. If you run `npm install --save-dev <package>`, it adds the package to `devDependencies`. There's not really a difference between `dependencies` and `devDependencies`, except if we publish the package to NPM and someone else uses it. So, we recommend just adding packages to `dependencies` unless there's a special reason to use `devDependencies`. See the [`package.json devDependencies` docs](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#devdependencies) for more info.
-  - `scripts`: Set of **scripts we can run** with `npm run <script-name>`. We can write arbitrary commands for Node to run as part of each script. For example, the `lint-check` script is from our [linting repo](https://github.com/TritonSE/linters) and runs ESLint to scan our code for inconsistencies. Some special scripts run at preset times—for example, `prepare` runs automatically after every `npm install`, and `start` runs when we run `npm start`. See the [NPM scripts docs](https://docs.npmjs.com/cli/v10/using-npm/scripts) for more info.
-  - `_moduleAliases`: Map of **module aliases** to the corresponding file paths. We use this so we can write simpler import paths (such as "src/foo" instead of "../../src/foo"). This is custom behavior provided by the [module-alias package](https://www.npmjs.com/package/module-alias).
+  - `requires-python`: The **Python versions** that the code supports.
+  - `dependencies`: List of **packages that we use** in our own code and the allowed version numbers. uv refers to this when it installs dependencies (`uv sync`), and it automatically updates it when we add another package (`uv add <package>`). Ours are [FastAPI](https://fastapi.tiangolo.com/) (the web framework), `fastapi-cli` (the `fastapi dev` command that runs it), [`pydantic-settings`](https://pydantic.dev/docs/validation/latest/concepts/pydantic_settings/) (reads our `.env` file), and [PyMongo](https://pymongo.readthedocs.io/en/stable/) (talks to MongoDB). See the [uv dependencies docs](https://docs.astral.sh/uv/concepts/projects/dependencies/) for more info about the syntax.
+  - `[dependency-groups]`: The `dev` group lists **packages that we use only during development**: [Ruff](https://docs.astral.sh/ruff/) (linter and formatter), [mypy](https://mypy.readthedocs.io/en/stable/) (type checker), [pytest](https://docs.pytest.org/en/stable/) (testing framework), and `httpx2` (sends requests to the app in tests). If you run `uv add --dev <package>`, it adds the package to this group. `uv sync` installs these too, so the difference only matters when the code is deployed. See the [uv development dependencies docs](https://docs.astral.sh/uv/concepts/projects/dependencies/#development-dependencies) for more info.
+  - `[tool.*]` sections: **Settings for our tools.** `[tool.ruff]` chooses which lint rules Ruff enforces (this is the Python counterpart of the ESLint config in our [linting repo](https://github.com/TritonSE/linters)), `[tool.mypy]` turns on mypy's strict mode so every function needs type hints, and `[tool.pytest]` tells pytest where our tests are. `[tool.uv]` tells uv that this is an app, not a library to publish.
   </details>
 
-- [`package-lock.json`](/backend/package-lock.json) **keeps track of the version of each dependency** which was last installed. This file is often quite large, and npm automatically updates it so there's generally no need to edit it manually. However, it's still very important to **include it in Git** because it ensures that different developers are using the same packages, thus avoiding conflicts.
-- `node_modules` **contains the code from all our dependencies.** This folder is also often very large, and you generally won't need to look at anything inside it. Since `package.json` and `package-lock.json` have all the information that NPM needs to keep track of dependencies, we usually have Git ignore the `node_modules` folder.
-- [`src/server.ts`](/backend/src/server.ts) is the **entry point** of our backend code, meaning Node runs this file first. In this file, we connect Mongoose to our MongoDB instance and start up our Express middleware.
-- [`src/app.ts`](/backend/src/app.ts) **configures Express** to call our request handling code and sets up a generic error handler.
-- [`src/models`](/backend/src/models/) stores the **Mongoose schemata** (plural of schema) that we use in our database. In general, a **schema** defines the expected "shape" of an object, including its field names and their data types. The starter code only has one type of object, a Task, whose schema you can find in `src/models/task.ts`.
-- [`src/routes`](/backend/src/routes/) contains our **Express route definitions.** Each **route** is a specific path where the frontend can send an HTTP request to trigger the corresponding handler.
-- [`src/validators`](/backend/src/validators/) contains our server-side **validation logic.** These validators check each request to ensure that its data have the correct format before any other route handling logic runs. If the format is correct, then the data get passed along to the route handler; if not, then it redirects to an error handler.
-- [`src/controllers`](/backend/src/controllers/) contains the **request handler** (a.k.a. route handler) code. This is where the real business logic happens on the backend.
+- [`uv.lock`](/backend/uv.lock) **keeps track of the version of each dependency** which was last installed. This file is often quite large, and uv automatically updates it so there's generally no need to edit it manually. However, it's still very important to **include it in Git** because it ensures that different developers are using the same packages, thus avoiding conflicts. ([uv lockfile docs](https://docs.astral.sh/uv/concepts/projects/layout/#the-lockfile))
+- [`.python-version`](/backend/.python-version) **pins the Python version** (3.14). uv reads it and downloads that version of Python for you if you don't have it, so everyone on the team runs the same Python.
+- `.venv` is the backend's **virtual environment,** which `uv sync` creates. It **contains a copy of Python and the code from all our dependencies.** This folder is also often very large, and you generally won't need to look at anything inside it. Since `pyproject.toml` and `uv.lock` have all the information that uv needs to keep track of dependencies, we have Git ignore the `.venv` folder. ([uv project environment docs](https://docs.astral.sh/uv/concepts/projects/layout/#the-project-environment))
+- [`Makefile`](/backend/Makefile) defines the **scripts we can run** with `make <target>`, like the `scripts` in a `package.json`. Each target is a list of shell commands. Most of them start with `uv run`, which runs a command inside `.venv` so it can use our dependencies. ([GNU Make manual](https://www.gnu.org/software/make/manual/make.html))
+  <details>
+  <summary><strong>Contents of Makefile</strong></summary>
+
+  - `start` runs `uv run fastapi dev src/main.py --port 3001`, which starts the backend on port 3001 and **automatically restarts it** whenever you save a backend file. See the [FastAPI CLI docs](https://fastapi.tiangolo.com/fastapi-cli/) for more info.
+  - `test` runs our automated tests with pytest.
+  - `format`, `lint-fix`, and `lint-check` run Ruff (and, for `lint-check`, mypy) to scan our code for inconsistencies and type errors. `lint-fix` and `format` also fix what they can automatically. The pre-commit Git hook runs `make lint-check` before every commit.
+  - `check-git-hooks` runs first in each lint target and checks that the Git hooks are installed. The hooks are installed when you run `npm install` in the `frontend` folder, so the lint targets fail until you've done that.
+  </details>
+
+- [`src/main.py`](/backend/src/main.py) is the **entry point** of our backend code, meaning `fastapi dev` runs this file first. It creates the FastAPI `app`, adds a middleware that turns unexpected errors into `500 Internal Server Error` responses, sets up [CORS](https://fastapi.tiangolo.com/tutorial/cors/) so the frontend is allowed to call the backend, and includes the routes from each domain folder. FastAPI also generates **interactive API docs** for every route, which you can open at http://localhost:3001/docs while the backend is running.
+- [`src/config.py`](/backend/src/config.py) **reads our settings** (`MONGODB_URI` and `FRONTEND_ORIGIN`) from `backend/.env` with [Pydantic Settings](https://pydantic.dev/docs/validation/latest/concepts/pydantic_settings/). If a setting is missing, the backend refuses to start and tells you which one.
+- [`src/database.py`](/backend/src/database.py) **connects PyMongo to our MongoDB instance** when the app starts (in a [lifespan function](https://fastapi.tiangolo.com/advanced/events/)) and disconnects when it stops. If MongoDB isn't running, the backend gives up after 5 seconds and refuses to start. It also defines `Database`, a [dependency](https://fastapi.tiangolo.com/tutorial/dependencies/) that gives route functions access to the database.
+- [`src/exceptions.py`](/backend/src/exceptions.py) defines the **error types shared by all domains,** such as `NotFound` (404) and `BadRequest` (400). Raising one of them in a route function makes FastAPI send an error response with that status code. ([FastAPI error handling docs](https://fastapi.tiangolo.com/tutorial/handling-errors/))
+- [`src/task`](/backend/src/task/) contains **everything about tasks,** our only type of data so far. We organize the backend by **domain**: one folder per kind of data, each with the same four files. This is a common FastAPI convention (see [FastAPI best practices](https://github.com/zhanymkanov/fastapi-best-practices)) which TSE's FastAPI projects also use. When you add another kind of data later, you'll add another folder next to `task`.
+  <details>
+  <summary><strong>Contents of src/task</strong></summary>
+
+  - `router.py` contains our **route functions.** Each **route** is a specific path where the frontend can send an HTTP request to trigger the corresponding function. In FastAPI, one decorated function is both the route definition and its request handler, so this is also where the business logic of each request starts. ([FastAPI bigger applications docs](https://fastapi.tiangolo.com/tutorial/bigger-applications/))
+  - `schemas.py` contains our **Pydantic schemas** (`TaskCreate`, `TaskUpdate`, and `TaskResponse`). In general, a **schema** defines the expected "shape" of an object, including its field names and their data types. FastAPI checks each request body against a schema before the route function runs, so this is also our server-side **validation logic**: if the data have the wrong format, FastAPI responds with a `422 Unprocessable Content` error by itself. The response schema decides which fields are sent back to the frontend. ([FastAPI request body docs](https://fastapi.tiangolo.com/tutorial/body/), [Pydantic models docs](https://pydantic.dev/docs/validation/latest/concepts/models/))
+  - `service.py` contains our **database queries** for the `tasks` collection, written with PyMongo. It converts between MongoDB documents and our schemas. ([PyMongo collection docs](https://pymongo.readthedocs.io/en/stable/api/pymongo/asynchronous/collection.html))
+  - `exceptions.py` contains the **errors specific to tasks,** such as `TaskNotFound`, which builds on `NotFound` from `src/exceptions.py`.
+  - `__init__.py` is empty. It marks the folder as a Python package so we can import from it (for example, `from src.task import service`). The `src` folder has one too.
+  </details>
+
+- [`tests`](/backend/tests/) contains the backend's **automated tests,** which `make test` runs with pytest. The starter code only has one small test, which checks that the app starts and serves its API docs. ([FastAPI testing docs](https://fastapi.tiangolo.com/tutorial/testing/))
 
 <details>
-<summary><strong>🤔 For new developers: How Express runs this code</strong></summary>
+<summary><strong>🤔 For new developers: Coming from Express?</strong></summary>
+
+_If you've built an Express backend before, here's roughly where each piece went:_
+
+| Express                                       | FastAPI                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| `app.ts` + `server.ts`                        | `main.py` + `database.py`                                             |
+| `util/validateEnv.ts`                         | `config.py`                                                           |
+| `routes/task.ts` + `controllers/task.ts`      | `task/router.py` (a route function is both the route and the handler) |
+| `validators/task.ts`                          | `task/schemas.py` (Pydantic validates request bodies automatically)   |
+| `models/task.ts` (Mongoose model and queries) | `task/schemas.py` (shape) + `task/service.py` (PyMongo queries)       |
+| Global error handler                          | FastAPI's built-in `HTTPException` handling + the 500 middleware      |
+| `npm install` / `npm start` with nodemon      | `uv sync` / `make start` (`fastapi dev` restarts on save)             |
+
+</details>
+
+<details>
+<summary><strong>🤔 For new developers: How FastAPI runs this code</strong></summary>
 <em>
 
-Let's trace the code path from `src/server.ts` to `src/controllers/task.ts` to understand how Express runs this code.
+Let's trace what happens when the frontend sends a `POST /api/task` request to create a task, starting from `make start`.
 
-1. In `server.ts`, we call `app.listen()` with two arguments: the port number and a callback function to run once Express has successfully initialized. `app` is imported from `app.ts`.
-2. In `app.ts`, we set up Express by calling `const app = express()`, then we call `app.use("/api/task, taskRoutes")`. The latter tells Express that for any HTTP request whose path starts with `/api/task`, the handler code is in `taskRoutes`, imported from `routes/task.ts`.
-3. In `routes/task.ts`, we create an `express.Router` to handle those `/api/task` routes. Each handler specifies a route suffix and one or more functions to call when handling requests on that route. Those functions come from `controllers/task.ts` and `validators/task.ts`.
-   1. `router.get("/:id", TaskController.getTask)` handles requests to `GET /api/task/:id` (where `:id` is the ID of a Task object) by calling the `getTask` controller. The `router.delete` call works very similarly.
-   2. `router.post("/", TaskValidator.createTask, TaskController.createTask)` handles requests to `POST /api/task` by calling the `createTask` validator and controller.
-4. As we said above, the functions in `validators/task.ts` check that a Task object in a request has the correct fields and data types.
-5. The functions in `controllers/task.ts` interact with the database, such as by creating new documents with the Task schema. That schema is imported from `models/task.ts`.
-6. In `models/task.ts`, we define a Task object to have a required string `title`, optional string `description`, optional boolean `isChecked`, and required Date `dateCreated`. MongoDB will automatically give each object its own [unique ID](https://www.mongodb.com/docs/manual/reference/bson-types/#std-label-objectid) in a field called `_id`.
+1. `make start` runs `uv run fastapi dev src/main.py --port 3001`. `fastapi dev` imports `src/main.py`, finds the variable named `app`, and starts a server for it on port 3001.
+2. In `main.py`, we create the app by calling `app = FastAPI(lifespan=lifespan)`. `lifespan` is imported from `database.py`, and FastAPI runs it when the server starts: it connects to MongoDB and makes the database available to our routes. Then we call `app.include_router(task_router)`, which tells FastAPI to handle every route defined in `task/router.py`.
+3. In `task/router.py`, we create an `APIRouter` with `prefix="/api"`, so every path in this file starts with `/api`. Each route function has a decorator that specifies an HTTP method and a path suffix.
+   1. `@router.get("/task/{task_id}")` above `get_task` handles requests to `GET /api/task/{task_id}` (where `{task_id}` is the ID of a task). FastAPI passes that part of the URL to the function as its `task_id` parameter. The `@router.delete` route works very similarly.
+   2. `@router.post("/task", status_code=status.HTTP_201_CREATED)` above `create_task` handles requests to `POST /api/task`.
+4. Before calling `create_task(data: TaskCreate, database: Database)`, FastAPI fills in its parameters. It validates the JSON request body against `TaskCreate` from `task/schemas.py`, which says a task has a required string `title` (at least 1 character), an optional string `description`, and an optional boolean `isChecked`. If the body doesn't match, FastAPI responds with a 422 error and never calls `create_task`. It also gets the `Database` dependency by calling `get_database` in `database.py`.
+5. `create_task` calls `service.create` in `task/service.py`, which adds the current date as `dateCreated` and inserts the task into the `tasks` collection with PyMongo's `insert_one`. MongoDB automatically gives each document its own [unique ID](https://www.mongodb.com/docs/manual/reference/bson-types/#std-label-objectid) in a field called `_id`.
+6. `service.create` returns a `TaskResponse`, the function's return type. FastAPI converts it to JSON, using the name `_id` for its `id` field, and sends it with a 201 status. Optional fields that weren't set come back as `null`, for example `{"title": "Buy groceries", "description": null, "isChecked": false, "_id": "6afe72e8e6113f215e611987", "dateCreated": "2026-11-19T03:54:16.219000Z"}`.
 
 </em>
 </details>
@@ -80,7 +118,7 @@ Example request flow: creating a new task
 
 ### Frontend files
 
-- [`package.json`](/frontend/package.json), like the one in the backend folder, **denotes a Node package.** Similarly, we also have a `package-lock.json` file and a `node_modules` folder.
+- [`package.json`](/frontend/package.json) **denotes a Node package,** much like `pyproject.toml` does for the backend's Python project. It lists the frontend's `dependencies` and `devDependencies`, and its `scripts` (run with `npm run <script-name>`) play the same role as the backend's `Makefile`. Similarly, `package-lock.json` keeps track of installed versions like `uv.lock`, and the `node_modules` folder contains the installed packages like `.venv`. Its `prepare` script runs automatically after every `npm install` and installs our Git hooks with [Husky](https://typicode.github.io/husky/), which is why we run `npm install` in the `frontend` folder first. ([`package.json` documentation](https://docs.npmjs.com/cli/v10/configuring-npm/package-json))
 - [`index.html`](/frontend/index.html) contains the actual HTML document **where React injects all of its generated HTML** in the browser. Since we write all our pages and components in React, this is the only HTML file needed in the entire project. The file itself was generated by Vite, and we added some extra code to download the Rubik font from Google Fonts and tell the browser where the site favicon is located.
 - [`src/main.tsx`](/frontend/src/main.tsx) is our **frontend's entry point.** It tells React where to inject our content in `index.html` and renders the `App` component from `src/App.tsx`.
 - [`src/App.tsx`](/frontend/src/App.tsx) is the **root of our React application** code, where we set up `react-router` with our frontend pages. Note that the "routes" in this file are different from our backend API routes—here, we map each page to its own URL for the purpose of client-side routing. In general, the only other code in `App.tsx` should be things that we want to make available to all parts of the application.

@@ -29,7 +29,14 @@ Completion of this onboarding repository is **required** for all new TSE members
 
 ## Tools and technologies
 
-The engineering manager on each TSE project chooses its tech stack (programming languages and frameworks) before development starts. The **MERN stack** (MongoDB, Express, React, Node) is very popular in the industry, so it's been our most common stack historically and we'll use it for this todo list app too. Beyond that, we'll use **TypeScript** to write our actual code, **Vitest** to test it, and **Git** to manage version history. Expand the sections below to learn more about each piece of this tech stack.
+The engineering manager on each TSE project chooses its tech stack (programming languages and frameworks) before development starts. For this todo list app, we'll use **MongoDB** as our database, **FastAPI** for our backend, **React** for our frontend, and **Node** to run the frontend tooling. We'll write the frontend in **TypeScript** and the backend in **Python**, test them with **Vitest** and **pytest**, and use **Git** to manage version history. Expand the sections below to learn more about each piece of this tech stack.
+
+<details>
+<summary><strong>🤔 For new developers: What about the MERN stack?</strong></summary>
+
+_You may hear people at TSE talk about the **MERN stack** (MongoDB, Express, React, Node), which has historically been our most common stack. Express is a backend framework for Node, so a MERN app is written in JavaScript/TypeScript from top to bottom. This guide replaces Express with FastAPI, a Python backend framework, so our backend is written in Python and Node is only used for the frontend. The ideas you'll learn here (routes, requests and responses, validation, database queries) carry over directly to Express and most other backend frameworks._
+
+</details>
 
 <details>
 <summary><strong>ℹ️ Definition: Frontend vs. backend</strong></summary>
@@ -43,7 +50,7 @@ _Generally, the **frontend** of a web app or mobile app is the code that runs on
 <details>
 <summary><strong>About TypeScript</strong></summary>
 
-Most of the starter code files are [TypeScript](https://www.typescriptlang.org) files (ending in `.ts` or `.tsx`). TypeScript is closely related to [JavaScript](https://en.wikipedia.org/wiki/JavaScript) (`.js` or `.jsx`), the industry-standard **language for web development** along with HTML and CSS. Web browsers must be able to understand HTML, CSS, and JS in order to properly show most modern websites to users. As for TypeScript, it's an extended version ("superset") of JavaScript that adds static typing to the language.
+Most of the frontend starter code files are [TypeScript](https://www.typescriptlang.org) files (ending in `.ts` or `.tsx`). TypeScript is closely related to [JavaScript](https://en.wikipedia.org/wiki/JavaScript) (`.js` or `.jsx`), the industry-standard **language for web development** along with HTML and CSS. Web browsers must be able to understand HTML, CSS, and JS in order to properly show most modern websites to users. As for TypeScript, it's an extended version ("superset") of JavaScript that adds static typing to the language.
 
 **Static typing** means that the data type of each variable is determined **at compile time**, before the program runs, and the compiler can alert you to any type mismatches. Other statically-typed languages include Java and C++.
 
@@ -58,9 +65,36 @@ Note that although TypeScript and JavaScript are technically different languages
 
 <em>
 
-For context, JavaScript comes from a standard called [ECMAScript](https://en.wikipedia.org/wiki/ECMAScript), which is designed to ensure that websites work the same across different web browsers. Microsoft created TypeScript when software engineers realized that static typing is actually very helpful for developing large applications. However, browsers and servers still run JS, not TS, so we use a special compiler called [Babel](<https://en.wikipedia.org/wiki/Babel_(transcompiler)>) to automatically convert our original code into something they can understand.
+For context, JavaScript comes from a standard called [ECMAScript](https://en.wikipedia.org/wiki/ECMAScript), which is designed to ensure that websites work the same across different web browsers. Microsoft created TypeScript when software engineers realized that static typing is actually very helpful for developing large applications. However, browsers still run JS, not TS, so we use a special compiler called [Babel](<https://en.wikipedia.org/wiki/Babel_(transcompiler)>) to automatically convert our original code into something they can understand.
 
 </em>
+</details>
+</details>
+
+### Python
+
+<details>
+<summary><strong>About Python</strong></summary>
+
+The backend starter code is written in [Python](https://www.python.org) (in files ending in `.py`). Python is one of the most popular programming languages in the world, known for its readable syntax, and it's widely used for backend servers, scripting, data science, and machine learning.
+
+As mentioned above, Python is a **dynamically-typed** language, just like JavaScript. Python doesn't check data types until the program runs, so it has the same drawbacks for large projects. To get the benefits of static typing anyway, we write **type hints** on our variables, function parameters, and return values. For example, here's the first line of a function in the starter code, which takes a `task_id` that's a string and a `database`, and returns a `TaskResponse`:
+
+```python
+async def get_task(task_id: str, database: Database) -> TaskResponse:
+```
+
+Python itself ignores type hints when it runs your code. Instead, we use a tool called [mypy](https://mypy.readthedocs.io/en/stable/) to check them **before** the program runs, similar to how the TypeScript compiler checks TypeScript code. We configure mypy in its strictest mode, so it requires type hints on every function and alerts you to any type mismatches. You can think of "Python with type hints and mypy" as Python's version of TypeScript.
+
+Type hints aren't only for mypy, though. Some libraries read them while the program runs, too. As you'll see below, FastAPI and Pydantic use them to check that the data our backend receives has the correct shape.
+
+We also use [Ruff](https://docs.astral.sh/ruff/) to lint and format our Python code, which does the same job for the backend that ESLint and Prettier do for the frontend.
+
+<details>
+<summary><strong>🤔 For new developers: If you're new to Python or type hints…</strong></summary>
+
+_…we recommend skimming the official [Python tutorial](https://docs.python.org/3/tutorial/) if you haven't used Python before, and FastAPI's short [introduction to Python types](https://fastapi.tiangolo.com/python-types/), which explains type hints with examples. You don't need to master either one before starting this guide._
+
 </details>
 </details>
 
@@ -71,7 +105,7 @@ For context, JavaScript comes from a standard called [ECMAScript](https://en.wik
 
 [MongoDB](https://www.mongodb.com) is a popular **cloud database service.** Its databases are **non-relational,** which basically means "not SQL." That is, unlike the rigid table, column, and row format of relational SQL databases, MongoDB stores **collections** of **documents** where the format of each document is highly flexible and can store arbitrary data. If you're familiar with [JSON](https://www.json.org/json-en.html), it's useful to think of MongoDB documents as JSON objects—in fact, they're stored as [binary encoded JSON](https://www.mongodb.com/basics/bson).
 
-However, MongoDB doesn't enforce data types like SQL databases do. So, we use a JavaScript library called [Mongoose](https://mongoosejs.com) to interface with MongoDB and provide extra type checks, helper functions, and more.
+To interface with MongoDB from our backend, we use [PyMongo](https://www.mongodb.com/docs/languages/python/pymongo-driver/current/), MongoDB's official Python library, which lets us insert, find, update, and delete documents. However, MongoDB doesn't enforce data types like SQL databases do, and neither does PyMongo. So, we use another Python library called [Pydantic](https://docs.pydantic.dev/latest/) to describe the shape of our data (which fields each object has, and their types) and check that the data going in and out of our backend matches that shape.
 
 <details>
 <summary><strong>ℹ️ Definition: Database</strong></summary>
@@ -87,20 +121,22 @@ _A **database** is a specialized place for storing large amounts of data in the 
 <details>
 <summary><strong>About Node</strong></summary>
 
-[Node.js](https://nodejs.org), or just Node, is a **JavaScript runtime environment.** It allows us to run JavaScript code outside of a browser, such as on a backend server or in command-line scripts. Our backend code, for example, is in TypeScript and will interact with MongoDB and Express.
+[Node.js](https://nodejs.org), or just Node, is a **JavaScript runtime environment.** It allows us to run JavaScript code outside of a browser, such as on a backend server or in command-line scripts. Many projects, including most past TSE projects, use Node to run their backend. In this guide, our backend runs on Python instead, so we only use Node for the frontend's development tools (like Vite, ESLint, and Vitest) and for the Git hooks that check your code before each commit.
 
 [npm](https://www.npmjs.com), or Node Package Manager, is a **package manager for JavaScript projects** that comes with Node by default. It provides a command-line interface, which we'll use later by running commands that start with `npm`, and a huge online database of open-source packages. These are vital for TSE and software projects of any size because they can save us from having to "reinvent the wheel" over and over.
 
 </details>
 
-### Express
+### FastAPI
 
 <details>
-<summary><strong>About Express</strong></summary>
+<summary><strong>About FastAPI</strong></summary>
 
-[Express](https://expressjs.com) is a **framework for writing backend APIs with Node.** Through Express, we'll tell our server how to handle each type of request from the frontend.
+[FastAPI](https://fastapi.tiangolo.com) is a **framework for writing backend APIs with Python.** Through FastAPI, we'll tell our server how to handle each type of request from the frontend. FastAPI is built around type hints: it uses them, together with Pydantic, to automatically check every request body and reject invalid ones before our code even runs. It also generates interactive documentation for our API, which you can use to try out requests right in your browser.
 
 In order to set up our backend, we manually created and organized all of the files in the `backend` folder. Backend code usually doesn't require as much complicated setup as frontend in TSE projects, so we don't need any special setup tools.
+
+To manage our backend's dependencies, we use [uv](https://docs.astral.sh/uv/), a **package manager for Python projects.** It does for the backend what npm does for the frontend: it installs the packages that the backend depends on (and even the right version of Python itself), and it provides a command-line interface, which we'll use later by running commands that start with `uv`.
 
 <details>
 <summary><strong>ℹ️ Definition: Application programming interface (API)</strong></summary>
@@ -141,6 +177,8 @@ _…we recommend checking out the official [React quick start guide](https://rea
 Vitest is modeled after another well-known testing framework called [Jest](https://jestjs.io), following essentially the same patterns.
 
 We also use [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) for extra powerful integration with React. RTL essentially simulates a browser, including the ability to render React components and trigger user interaction events.
+
+On the backend, we use [pytest](https://docs.pytest.org), the most popular testing framework for Python. The backend starter code includes one small pytest test, which you can use as a starting point if you want to write more.
 
 ### TSE Constellation
 
@@ -191,8 +229,13 @@ Here are some links to documentation and guides that you may find helpful:
   - [CSS reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference)—properties, pseudo-classes, selectors
 - [TypeScript language reference](https://www.typescriptlang.org/docs/handbook/utility-types.html)
   - Also see the [Handbook](https://www.typescriptlang.org/docs/handbook/intro.html) for a higher-level overview of each concept
-- [Mongoose API reference](https://mongoosejs.com/docs/api/mongoose.html)
-- [Express API reference](https://expressjs.com/en/api.html)
+- [Python documentation](https://docs.python.org/3/)
+  - Also see the [Python tutorial](https://docs.python.org/3/tutorial/) for an introduction to the language
+- [FastAPI tutorial](https://fastapi.tiangolo.com/tutorial/) - step-by-step guides to each feature
+  - Also see the [FastAPI reference](https://fastapi.tiangolo.com/reference/) for the details of each class and function
+- [Pydantic documentation](https://docs.pydantic.dev/latest/) - models, fields, and validators
+- [PyMongo documentation](https://www.mongodb.com/docs/languages/python/pymongo-driver/current/) - guides to connecting to MongoDB and writing queries
+  - Also see the [PyMongo async API reference](https://pymongo.readthedocs.io/en/stable/api/pymongo/asynchronous/index.html) for the details of each class and method that we use
 - [React reference](https://react.dev/reference/react)
   - [Built-in hooks](https://react.dev/reference/react/hooks)
   - [Built-in DOM components](https://react.dev/reference/react-dom/components)
